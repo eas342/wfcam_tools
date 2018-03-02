@@ -6,6 +6,7 @@ from astropy.io import fits, ascii
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import os
+import pdb
 
 ## My goal here is to merge catalogs for each cluster
 
@@ -21,7 +22,8 @@ fileTable['Source'][baseCols] = 'NGC 6811'
 ## Mike Irwin suggests 1arsec radius aperture phot
 ## (ie Aper_flux_3)
 
-useColumns = ['Aper']
+## Threshold for cross-matching catalog in arcseconds
+maxDist = 0.2 * u.arcsec
 
 class ukirt_catalog(object):
     """ Class to store information on a UKIRT catalog table
@@ -118,14 +120,63 @@ def merge_files(cluster='NGC 2420'):
     
     clusterInd = (fileTable['Source'] == cluster)
     cols = np.unique(fileTable['Filter'][clusterInd])
+    ## let's just pu tin wavelength order
+    cols = ['J','H','K']
+    
     firstTimeThrough = True
     for oneCol in cols:
         exposureInd = (fileTable['Filter'] == oneCol) & clusterInd
         exposures = fileTable['File'][exposureInd]
-        for oneExp in exposures:
-
-            subData = da
+        nexp = len(exposures)
+        
+        photName = "{} mag".format(oneCol)
+        photErrName = "{} mag err".format(oneCol)
+        className = "{} flags".format(oneCol)
+        
+        for ind, oneExp in enumerate(exposures):
+            expCat = ukirt_catalog(oneExp)
+            thisTable = expCat.make_simpleTable()
             if firstTimeThrough:
-                t = Table()
+                t = thisTable[['Ra (deg)','Dec (deg)']]
+                master_coors = expCat.coors
+                firstTimeThrough = False
+                idx = np.arange(len(t))
+                d2d = np.zeros(len(t))
+            else:
+                idx, d2d, d3d = master_coors.match_to_catalog_sky(expCat.coors)
+            
+            if ind == 0:
+                allPhot = np.zeros([len(master_coors),nexp])
+                allPhot[:] = np.nan
+                allErr = np.zeros_like(allPhot)
+                allErr[:] = np.nan
+                allClass = np.zeros([len(master_coors),nexp],dtype=np.int)
+            ## Put into the 2D array
+            ## only include points that are within maxDist of the catalog
+            goodIdx = (d2d < maxDist)
+            allPhot[goodIdx,ind] = thisTable[photName][idx[goodIdx]]
+            allErr[goodIdx,ind] = thisTable[photErrName][idx[goodIdx]]
+            allClass[goodIdx,ind] = thisTable['Classification'][idx[goodIdx]]
+            
+        ## Average the photometry
+        avgMag = np.round(np.mean(allPhot,axis=1),3)
+        avgErr = np.round(np.sqrt(np.sum(allErr*2,axis=1)/float(nexp)),3)
+        totClass = np.sum(allClass,axis=1)
+        t[photName] = avgMag
+        t[photErrName] = avgErr
+        t[className] = totClass
+        
+    outName = cluster.replace(' ','_')
+    t.write('merged_catalogs/{}_cat.csv'.format(outName))
+    t.write('merged_catalogs/{}_cat.fits'.format(outName))
+    
+def all_clusters():
+    """ Go through all Clusters"""
+    clusters = np.unique(fileTable['Source'])
+    for oneClust in clusters:
+        merge_files(oneClust)
+
+if __name__ == '__main__':
+    all_clusters()
+    
                 
-                t['']
