@@ -160,15 +160,15 @@ def merge_files(cluster='NGC 2420'):
             
         ## Average the photometry
         avgMag = np.round(np.mean(allPhot,axis=1),3)
-        avgErr = np.round(np.sqrt(np.sum(allErr*2,axis=1)/float(nexp)),3)
+        avgErr = np.round(np.sqrt(np.sum(allErr**2,axis=1)/float(nexp)),3)
         totClass = np.sum(allClass,axis=1)
         t[photName] = avgMag
         t[photErrName] = avgErr
         t[className] = totClass
         
     outName = cluster.replace(' ','_')
-    t.write('merged_catalogs/{}_cat.csv'.format(outName))
-    t.write('merged_catalogs/{}_cat.fits'.format(outName))
+    t.write('merged_catalogs/{}_cat.csv'.format(outName),overwrite=True)
+    t.write('merged_catalogs/{}_cat.fits'.format(outName),overwrite=True)
     
 def all_clusters():
     """ Go through all Clusters"""
