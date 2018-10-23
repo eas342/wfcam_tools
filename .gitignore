@@ -1,0 +1,9 @@
+.ipynb_checkpoints/
+*.pyc
+*.xlsx
+merged_catalogs*/*.fits
+merged_catalogs*/*.csv
+all_phot/*.fits
+all_phot/*/*.fit
+plots/*.png
+plots/*.pdf
