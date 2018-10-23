@@ -165,10 +165,20 @@ def merge_files(cluster='NGC 2420'):
         t[photName] = avgMag
         t[photErrName] = avgErr
         t[className] = totClass
-        
+    
+    ## Also put in hours, min, sec, etc. for convenience
+    tableCoord = SkyCoord(t["Ra (deg)"],t["Dec (deg)"],unit=(u.deg,u.deg))
+    t['coord hmsdms'] = tableCoord.to_string('hmsdms',sep=' ')
+    
     outName = cluster.replace(' ','_')
     t.write('merged_catalogs/{}_cat.csv'.format(outName),overwrite=True)
     t.write('merged_catalogs/{}_cat.fits'.format(outName),overwrite=True)
+    
+    ## Make a merged catalog that has only sources w/ J, H and K detection
+    detectedJHK = np.isfinite(t['J mag']) & np.isfinite(t['H mag']) & np.isfinite(t['K mag'])
+    tJHK = t[detectedJHK]
+    tJHK.write('merged_catalogs_JHK_det/{}_cat.csv'.format(outName),overwrite=True)
+    tJHK.write('merged_catalogs_JHK_det/{}_cat.fits'.format(outName),overwrite=True)
     
 def all_clusters():
     """ Go through all Clusters"""
